@@ -10,3 +10,5 @@ artifacts/**
 .ruff_cache/
 .env
 *.crdownload
+# Authorized Bite2Text dataset archive (never publish clinical data).
+Bits2Bites_v01.zip
