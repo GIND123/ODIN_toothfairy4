@@ -1,0 +1,15 @@
+expected_cases: 1000
+# Override after inspecting the authorized archive if its naming differs.
+id_regex: "(?P<case>.+?)(?:_(?:upper|lower|front|left|right|occlusal|buccal)(?:_.*)?)?$"
+salt_env: BITE2TEXT_ID_SALT
+extensions:
+  ios: [".stl", ".obj", ".ply", ".off"]
+  intraoral_photo: [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"]
+  report: [".txt"]
+folders:
+  ios: ios
+  intraoral_photo: intraoral-photo
+  reports_ios_it: reports_ios_it
+  reports_ios_en: reports_ios_en
+  reports_photo_it: reports_intraoral-photo_it
+  reports_photo_en: reports_intraoral-photo_en

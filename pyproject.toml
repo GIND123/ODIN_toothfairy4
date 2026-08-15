@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "odin-bite2text"
+version = "0.1.0"
+description = "Reproducible Bite2Text ingestion, audit, baseline, and submission toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "jinja2>=3.1,<4",
+  "matplotlib>=3.8,<4",
+  "numpy>=1.26,<3",
+  "pandas>=2.2,<3",
+  "pillow>=10,<12",
+  "pyyaml>=6,<7",
+  "scikit-learn>=1.4,<2",
+  "trimesh>=4.4,<5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
+
+[project.scripts]
+bite2text = "bite2text.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bite2text"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+

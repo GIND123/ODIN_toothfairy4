@@ -1,0 +1,7 @@
+# Confirm these keys against the authenticated Grand Challenge participant instructions.
+format: json
+case_id_field: case_id
+report_field: report
+require_nonempty: true
+language: en
+
