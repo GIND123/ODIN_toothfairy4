@@ -12,3 +12,5 @@ artifacts/**
 *.crdownload
 # Authorized Bite2Text dataset archive (never publish clinical data).
 Bits2Bites_v01.zip
+# Per-case technical audit output can contain source folder identifiers.
+docs/assets/data_audit/mesh_metrics.csv

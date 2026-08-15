@@ -1,0 +1,21 @@
+{
+  "patients": 200,
+  "train_patients": 180,
+  "validation_patients": 20,
+  "meshes": 400,
+  "archive_bytes": 3648941430,
+  "invalid_meshes": 0,
+  "missing_annotation_cells": 0,
+  "annotation_without_mesh": 0,
+  "mesh_without_annotation": 0,
+  "duplicate_mesh_groups": 0,
+  "degenerate_triangles": 6,
+  "meshes_with_degenerate_triangles": 2,
+  "bilateral_exact_agreement": 0.565,
+  "upper_lower_triangle_correlation": 0.9498753131465637,
+  "transversal_unique_raw_values": 54,
+  "transversal_inconsistent_cross_wording": 15,
+  "transversal_malformed_tooth_tokens": [
+    "222"
+  ]
+}
