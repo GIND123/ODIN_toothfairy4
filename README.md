@@ -1,74 +1,76 @@
-# ODIN 2026 — Bite2Text starter kit
+# ODIN 2026 — Bite2Text (Task 2)
 
-End-to-end, privacy-conscious tooling for Task 2 of ODIN 2026: index the multimodal dataset, audit its 3D scans, photographs, and bilingual reports, train a leakage-safe retrieval baseline, and validate a submission file.
+Geometry-conditioned orthodontic report generation from registered intraoral scans.
 
-> This repository contains code only. Bite2Text is account-gated and must be downloaded by an authorized user from the [official page](https://ditto.ing.unimore.it/bite2text/). Do not commit patient data or generated thumbnails.
+Instead of asking a vision-language model to guess occlusal findings from photographs, this
+system **measures** them. The released scans are mutually registered *in occlusion*, so
+overbite, overjet, midline deviation, transverse relationships and the occlusal curves are
+directly computable from the surfaces; a small model maps those measurements onto the clinical
+fields, and a renderer emits them in the corpus's own six-part narrative idiom.
 
-## Competition snapshot (verified 2026-08-16)
+See **[docs/SYSTEM.md](docs/SYSTEM.md)** for the full design, the reverse-engineered scoring
+function, and the measured results.
 
-- Public release: **1,000 patient cases** according to the official Bite2Text page.
-- Inputs: upper/lower IOS meshes plus standardized RGB intraoral photographs.
-- Targets: clinician-authored Italian and English reports, separately for IOS and photographs.
-- Hidden test set: the supplied challenge text says **50 cases**; its labels are not public.
-- Phase 1 metrics: RadFact Logical precision/recall → F1 (clinical); BLEU-4 and METEOR → mean (captioning); `final = 0.8 * clinical + 0.2 * captioning`.
-- Phase 2: up to seven leading methods undergo blinded surgeon pairwise review and Elo-style ranking.
-- Missing output is treated as an empty report and scores zero.
-- The live leaderboard reportedly omits RadFact Logical scores because of platform limitations; final test ranking is offline.
+## Headline findings
 
-The prompt supplied with this repository also says “Training 2,000 1,000 patient cases,” which is internally inconsistent. The official dataset page consistently states 1,000 cases, so this project treats 1,000 as the expected public count and surfaces any mismatch in the audit. Rules may change: confirm the [challenge site](https://odin2026.grand-challenge.org/) and [official dataset page](https://ditto.ing.unimore.it/bite2text/) before submitting. The precise Grand Challenge container/output interface was not publicly retrievable during scaffolding, so `config/submission.yaml` is intentionally isolated and must be reconciled with the participant portal.
+* **The scoring function is not what it looks like.** On Grand Challenge the evaluator uses
+  its own local BLEU-4/METEOR fallbacks, and its "METEOR" is exact-match only with an F-mean
+  of `10PR/(R+9P)` — recall weighted 9:1. `src/bite2text/eval/gc_metrics.py` reproduces it.
+* **Two clinicians agree on 47% of findings** for the same patient (token Jaccard 0.472,
+  finding Jaccard 0.469, n=498 paired reports). That is the real ceiling.
+* **The corpus is formulaic enough that a single fixed report scores 0.547 captioning —
+  higher than one clinician scores against another (0.382).** Structure matters more than
+  patient specificity; correct field values add roughly +0.20 on top.
+* **The released scans are not in the frame the paper states.** Bits2Bites is anterior=+Y,
+  Bite2Text is anterior=−Y, and some cases put superior on Y. The frame is re-derived per
+  case; assuming RAS silently corrupts every measurement.
+
+## Layout
+
+```
+src/bite2text/
+  geom/          frame canonicalisation, arch profiling, clinical measurements
+  report/        narrative parser, template schema, renderer
+  eval/          byte-faithful replica of the challenge scorer
+  compose.py     inference path: geometry -> fields -> report
+scripts/         corpus analysis, feature extraction, training, evaluation
+submission/      Grand Challenge container (CPU-only) + robustness tests
+modal_apps/      RadFact judge on GPU (vLLM + the organisers' radfact_lite)
+docs/SYSTEM.md   design, scoring analysis, measured results
+```
 
 ## Quick start
 
 ```bash
-python -m venv .venv
-# PowerShell: .venv\Scripts\Activate.ps1
-# bash: source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Place the authorized extraction under data/raw/bite2text (or pass --data-root).
-bite2text index --data-root data/raw/bite2text --output artifacts/manifest.csv
-bite2text audit --manifest artifacts/manifest.csv --output-dir artifacts/audit
-bite2text train-baseline --manifest artifacts/manifest.csv --output artifacts/baseline.joblib
-bite2text predict --manifest artifacts/test_manifest.csv --model artifacts/baseline.joblib --output artifacts/submission.json
-bite2text validate-submission --input artifacts/submission.json --manifest artifacts/test_manifest.csv
+# Data: place the authorised Bite2Text extraction under data/raw/bite2text/<case>/...
+python scripts/analyze_reports.py
+python scripts/extract_geometry_features.py --root data/raw/bite2text \
+       --output artifacts/geom/bite2text_features.csv
+python scripts/train_field_models.py
+python scripts/evaluate_system.py
+
+# Container
+python submission/test_local.py      # contract + failure-mode tests
+cd submission && ./do_save.sh        # builds and exports the .tar.gz for upload
 ```
 
-To exercise the entire workflow without protected data:
+## Data note
 
-```bash
-python scripts/make_fixture.py --output data/fixture
-bite2text all --data-root data/fixture --output-dir artifacts/fixture_run
-pytest
-```
+Bite2Text is account-gated and must be downloaded by an authorised user from the
+[official page](https://ditto.ing.unimore.it/bite2text/). No patient data, mesh renders or
+report text is committed to this repository.
 
-The generated `artifacts/.../audit/report.html` is self-contained and contains aggregate charts only; it never embeds clinical photographs, mesh renders, report text, or case identifiers.
-
-## Expected extraction layout
-
-The indexer supports either modality-first directories (the official description) or patient-first directories. Filenames must share a stable patient token; configure extraction regexes in `config/dataset.yaml` when the downloaded naming convention differs.
-
-```text
-data/raw/bite2text/
-├── ios/
-├── intraoral-photo/
-├── reports_ios_it/
-├── reports_ios_en/
-├── reports_intraoral-photo_it/
-└── reports_intraoral-photo_en/
-```
-
-The manifest stores relative paths and a salted SHA-256 pseudonym, not the raw patient token. See [docs/DATA_AUDIT.md](docs/DATA_AUDIT.md), [docs/MODELING.md](docs/MODELING.md), and [docs/SUBMISSION.md](docs/SUBMISSION.md).
-
-## Reproducibility and safety
-
-- Patient-level splits only; never split individual images or jaws.
-- Duplicate hashes and near-duplicate text groups are reported before modeling.
-- Missing/corrupt files, image properties, mesh topology, language/report statistics, and cross-modal coverage are audited.
-- Seeds and configuration snapshots are written beside artifacts.
-- Reports are aggregate-only by default because the source is sensitive clinical data.
-- The included baseline is a pipeline smoke test, not medical software and not clinical advice.
+`Bits2Bites` is a **different** dataset (200 cases, arch pairs with direct occlusal
+annotations, no photographs and no reports). It is not the Task 2 training set, but its
+labels map onto the same findings over the same input, so it is used here to *validate* that
+the geometry measurements mean what they claim and to resolve the left/right frame ambiguity.
 
 ## Citation
 
-Dataset authors request citation of: Lumetti, L., Rizzo, F., Cremonini, F., Candeloro, E., Luca, L., Grana, C., & Bolelli, F. (2026). *Do Multimodal LLMs Understand Intraoral Dental Data? Dataset, Platform, and Baselines.* ECCV. Verify the final BibTeX on the official page before publication.
+Lumetti, L., Rizzo, F., Cremonini, F., Candeloro, E., Lombardo, L., Grana, C., & Bolelli, F.
+(2026). *Do Multimodal LLMs Understand Intraoral Dental Data? Dataset, Platform, and
+Baselines.* ECCV.
 
+Not medical software; not clinical advice.

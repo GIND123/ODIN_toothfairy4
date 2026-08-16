@@ -10,7 +10,11 @@ artifacts/**
 .ruff_cache/
 .env
 *.crdownload
-# Authorized Bite2Text dataset archive (never publish clinical data).
+# Authorized dataset archives (never publish clinical data).
 Bits2Bites_v01.zip
+Bite2Text.zip
+*.zip
+# Exported submission images can embed model artifacts; upload them, don't commit them.
+submission/*.tar.gz
 # Per-case technical audit output can contain source folder identifiers.
 docs/assets/data_audit/mesh_metrics.csv

@@ -1,0 +1,7 @@
+numpy==2.5.2
+scipy==1.18.0
+scikit-learn==1.9.0
+trimesh==4.12.2
+joblib==1.5.2
+# pulled in transitively by trimesh at import time
+Pillow==11.3.0

@@ -10,12 +10,15 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "jinja2>=3.1,<4",
+  "joblib>=1.4,<2",          # model bundle serialisation
   "matplotlib>=3.8,<4",
+  "nltk>=3.9,<4",            # BLEU-4, matching the challenge scorer's own implementation
   "numpy>=1.26,<3",
   "pandas>=2.2,<3",
-  "pillow>=10,<12",
+  "pillow>=10,<13",
   "pyyaml>=6,<7",
   "scikit-learn>=1.4,<2",
+  "scipy>=1.11,<2",          # arch profiling and signal processing
   "trimesh>=4.4,<5",
 ]
 
