@@ -146,18 +146,27 @@ def _crowding_sentence(f: ReportFindings) -> str:
     return "There is " + " and ".join(parts) + spacing_clause + "."
 
 
-def render_report(f: ReportFindings) -> str:
-    """Compose the six-part narrative from structured findings."""
-    return " ".join(
-        [
-            _transverse_sentence(f),
-            _vertical_sentence(f),
-            _sagittal_sentence(f),
-            _midline_sentence(f),
-            _curves_sentence(f),
-            _crowding_sentence(f),
-        ]
-    )
+def render_report(f: ReportFindings, dental_health: "DentalHealth | None" = None) -> str:
+    """Compose the report: the six-part occlusal narrative, then photograph findings.
+
+    ``dental_health`` is optional because the two report families differ. Intraoral-scan
+    reports stop after the occlusal section; photograph reports continue for another ~3.6
+    sentences about gingival status, restorations and caries. Pass the findings to include
+    that section — see ``bite2text.report.dental_health``.
+    """
+    parts = [
+        _transverse_sentence(f),
+        _vertical_sentence(f),
+        _sagittal_sentence(f),
+        _midline_sentence(f),
+        _curves_sentence(f),
+        _crowding_sentence(f),
+    ]
+    if dental_health is not None:
+        from .dental_health import render_dental_health
+
+        parts.extend(render_dental_health(dental_health))
+    return " ".join(parts)
 
 
 #: Modal values measured over the 1,496 parsed IOS reports. Used as the uninformed fallback
