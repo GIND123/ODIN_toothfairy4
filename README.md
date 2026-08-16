@@ -62,6 +62,22 @@ Bite2Text is account-gated and must be downloaded by an authorised user from the
 [official page](https://ditto.ing.unimore.it/bite2text/). No patient data, mesh renders or
 report text is committed to this repository.
 
+## Artifact backup
+
+Models, submission archives, evaluation summaries, logs, and plots can be backed up to a
+private Hugging Face repository. Copy `.env.example` to the ignored `.env`, set the lowercase
+`hf` variable to a fine-grained token, then run:
+
+```bash
+pip install huggingface-hub
+python scripts/huggingface_artifacts.py upload
+python scripts/huggingface_artifacts.py download --output restored_artifacts
+```
+
+Set `HF_REPO_ID` in `.env` to override the default repository. The backup intentionally
+excludes raw clinical data, photographs, per-case reports/predictions, and identifier-bearing
+feature tables.
+
 `Bits2Bites` is a **different** dataset (200 cases, arch pairs with direct occlusal
 annotations, no photographs and no reports). It is not the Task 2 training set, but its
 labels map onto the same findings over the same input, so it is used here to *validate* that

@@ -129,3 +129,45 @@ def test_bleu_and_final_score_arithmetic():
     assert bleu_4_local(["a b c d e"], ["a b c d e"]) == pytest.approx(1.0, abs=1e-6)
     assert tokenize("Class II, full.") == ["class", "ii", ",", "full", "."]
     assert score_final(0.5, 0.6) == pytest.approx(0.8 * 0.5 + 0.2 * 0.6)
+
+
+def test_dental_health_round_trip():
+    """Photograph findings parse out of the corpus's own phrasings."""
+    from bite2text.report.dental_health import parse_dental_health
+
+    f = parse_dental_health(
+        "The gingivae are inflamed. Restorations are present on teeth 36-46. "
+        "No evident active carious processes are noted. "
+        "Pit-and-fissure sealants are present on the upper and lower first molars. "
+        "Plaque/tartar is present in the posterior sectors."
+    )
+    assert f.gingival_inflammation is True
+    assert f.restorations is True
+    assert f.caries is False
+    assert f.sealants is True
+    assert f.plaque is True
+
+
+def test_dental_health_reads_negations():
+    from bite2text.report.dental_health import parse_dental_health
+
+    f = parse_dental_health(
+        "No clear signs of gingival inflammation are observed. "
+        "No restorative treatments or evident ongoing carious processes are present."
+    )
+    assert f.gingival_inflammation is False
+    assert f.restorations is False
+
+
+def test_render_appends_dental_health_only_when_given():
+    """IOS reports stop after the occlusal section; photograph reports continue."""
+    from bite2text.compose import DEFAULT_DENTAL_HEALTH
+    from bite2text.report.render import MODAL_FINDINGS
+
+    occlusal_only = render_report(MODAL_FINDINGS)
+    with_photos = render_report(MODAL_FINDINGS, DEFAULT_DENTAL_HEALTH)
+    assert "gingiv" not in occlusal_only.lower()
+    assert "gingiv" in with_photos.lower()
+    assert with_photos.startswith(occlusal_only)
+    # Length should land near the photograph corpus median of 146 tokens.
+    assert 120 < len(tokenize(with_photos)) < 175
