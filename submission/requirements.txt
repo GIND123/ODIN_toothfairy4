@@ -5,3 +5,7 @@ trimesh==4.12.2
 joblib==1.5.2
 # pulled in transitively by trimesh at import time
 Pillow==11.3.0
+# Photograph field model. CPU-only wheels: the CUDA builds are ~2GB and nothing here uses a GPU.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu
+timm==1.0.15

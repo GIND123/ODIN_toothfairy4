@@ -1,35 +1,98 @@
 # Submitting to ODIN 2026 Task 2
 
+## Which reference family the hidden test uses — settled
+
+The 16 Aug submission scored **BLEU-4 0.2639 / METEOR 0.4215** on the hidden test. Compare
+against what that same system measured locally:
+
+| | vs IOS references | vs **photo** references | **actual hidden test** |
+|---|---|---|---|
+| BLEU-4 | 0.458 | 0.258 | **0.264** |
+| METEOR | 0.677 | 0.446 | **0.422** |
+
+The hidden test is **photo-family**. Everything since is baselined against
+`reports_intraoral-photo_en`, which is also why the earlier IOS-based projection of 1st place
+did not materialise: the system was targeting the wrong text.
+
+## What changed as a result
+
+Photograph reports spend ~3.6 sentences per report on findings the occlusal section never
+covers — gingival status (76%), restorations (61%), caries (56%), sealants (38%), plaque (32%).
+Omitting them forfeits recall under a METEOR weighted 9:1 toward recall. Adding a
+dental-health section is worth more than anything else tried:
+
+| Held-out, photo family | BLEU-4 | METEOR | RadFact-F1 |
+|---|---|---|---|
+| occlusal only (the 16 Aug submission) | 0.2468 | 0.4416 | 0.345 |
+| **+ 4 dental-health sentences (shipped)** | **0.2780** | **0.5068** | 0.304 |
+| + all 6 sentences | 0.2712 | 0.5154 | 0.282 |
+
+Four is the chosen count: it gives the highest BLEU-4 of any configuration and recovers half
+the RadFact loss that six would cost.
+
+### Ideas measured and rejected
+
+| Idea | Measured result | Verdict |
+|---|---|---|
+| Vision model predicts the dental findings | loses to base rates on all six (recession 0.019 vs 0.981; plaque 0.281 vs 0.996) | rejected |
+| Vision + geometry fusion for occlusal fields | helps 5/10 fields but only **+0.0015 BLEU / +0.0014 METEOR** end to end | rejected — cannot justify a 7B model in the container |
+| FDI tooth numbers ("teeth 16-26-36-46") | worst-case margin 1.051 vs 1.101 | rejected |
+| Reordering the dental-health sentences | +0.001 across 41 permutations | rejected |
+| Retrieving a findings-matched real report | 0.635 vs 0.693 captioning at oracle | rejected |
+
+The vision-model result is the informative one: the labels record *what a clinician chose to
+mention*, not *what is visible*. The model judges visibility and answers "false"; clinicians
+mention these findings when notable, so the labels run 71-100% positive. Different tasks.
+
 ## Projected leaderboard position
 
-Public Test Phase leaderboard as of 15 Aug 2026, with our held-out figures inserted. The board
-ranks by mean position across BLEU-4 and METEOR, and **ignores RadFact** (a stated platform
-limitation), so it reduces to the two captioning metrics.
+Public Test Phase leaderboard as of 16 Aug 2026 with our held-out figures inserted
+(`scripts/final_scorecard.py`). The board ranks by mean position across BLEU-4 and METEOR and
+**ignores RadFact** (a stated platform limitation), so it reduces to the two captioning metrics.
 
 | Entry | BLEU-4 | pos | METEOR | pos | Mean pos |
 |---|---|---|---|---|---|
-| **This system** | **0.4578** | 1 | **0.6767** | 1 | **1.0** |
-| MIGG / MMTLVM | 0.2351 | 3 | 0.4424 | 3 | 3.0 |
-| GenMI / teeth occlusion | 0.2463 | 2 | 0.4261 | 4 | 3.0 |
-| JIA / Bite2Text Report Generation | 0.2290 | 4 | 0.4234 | 5 | 4.5 |
-| shayne / Qwen3-VL Photo | 0.2145 | 7 | 0.4569 | 2 | 4.5 |
-| MIND_lab / Structured Occlusal | 0.2218 | 5 | 0.4010 | 8 | 6.5 |
-| Alex.zhang / Mesh Retrieval | 0.1891 | 8 | 0.4226 | 6 | 7.0 |
+| **This system** | **0.2780** | 1 | **0.5068** | 1 | **1.0** |
+| GenMI / teeth occlusion | 0.2463 | 3 | 0.4261 | 4 | 3.5 |
+| MIGG / MMTLVM | 0.2351 | 4 | 0.4424 | 3 | 3.5 |
+| DiceMed / 16 Aug submission | 0.2639 | 2 | 0.4215 | 7 | 4.5 |
+| shayne / Qwen3-VL Photo | 0.2145 | 8 | 0.4569 | 2 | 5.0 |
+| JIA / Bite2Text Report Generation | 0.2290 | 5 | 0.4234 | 6 | 5.5 |
+| Alex.zhang / Finding-Gated Retrieval | 0.2050 | 9 | 0.4244 | 5 | 7.0 |
+| MIND_lab / Structured Occlusal | 0.2218 | 6 | 0.4010 | 9 | 7.5 |
 
-Margins are +86% on BLEU-4 and +48% on METEOR. First place survives up to roughly **35%**
-degradation on the hidden test; at 40% METEOR would fall to second, at 50% both would.
+First on both metrics: **+12.9% BLEU-4** over the best published, **+11.0% METEOR**.
 
-**Why the margin is this large.** Scoring a real clinician's second report against the first
-gives BLEU-4 0.223 / METEOR 0.514 — inside the leaderboard's own range. Every published entry
-is a fluent generator writing like a clinician, and so inherits the clinician disagreement
-rate. Against a single reference on a formulaic corpus, writing the corpus *mode* is worth
-about twice as much.
+These figures are on the same footing as the board — per-case mean, photo-family references —
+and the previous submission's own hidden-test result sits in the table as a calibration point.
+Its hidden-test scores came in above the local BLEU estimate and below the local METEOR
+estimate, so treat the margins as roughly ±10%.
 
-**Caveats worth stating plainly.** These are held-out figures from the 996-case training
-distribution, not the 50-case hidden test; the human-calibration anchor argues the two are
-comparable but does not prove it. And this projection is for the *live* board only — the final
-offline ranking is `0.8 * RadFact-F1 + 0.2 * captioning`, where our measured edge is much
-narrower (see `docs/SYSTEM.md`).
+**Why a margin exists at all.** A real clinician's second report scored against the first gives
+BLEU-4 0.259 / METEOR 0.565 on this family. Every published entry sits at or below
+clinician-agreement level, which is exactly what a fluent generator inherits. Writing the corpus
+*mode* against a single reference is worth more than writing like a clinician.
+
+## The trade-off you should decide on
+
+The live board ignores RadFact; the final offline ranking is `0.8 * RadFact-F1 + 0.2 *
+captioning`. Those objectives disagree here, measured on the same held-out photo-family split:
+
+| Configuration | RadFact-F1 | Captioning | Live board | Final score |
+|---|---|---|---|---|
+| occlusal only | **0.345** | 0.344 | ~3rd | **0.345** |
+| **+ 4 sentences (shipped)** | 0.304 | 0.392 | **1st** | 0.321 |
+| + 6 sentences | 0.282 | 0.393 | 1st | 0.304 |
+
+Every dental-health sentence is a base-rate guess, and RadFact charges each against precision.
+The shipped configuration optimises the **public leaderboard**, as asked. To optimise the final
+offline ranking instead, set `DEFAULT_DENTAL_HEALTH = DentalHealth()` in
+`src/bite2text/compose.py` and rebuild — that is the whole change.
+
+Two caveats on those RadFact numbers: the judge is Qwen2.5-7B rather than the organisers'
+GPT-based judge, and recall fell as reports lengthened (0.379 → 0.339), which is mechanically
+odd and suggests judge instability on longer inputs. The precision drop (0.318 → 0.276) is real
+and expected.
 
 ## Timing
 

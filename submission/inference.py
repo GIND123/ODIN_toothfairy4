@@ -117,18 +117,30 @@ def case_id_from_inputs() -> str:
 
 
 def fallback_report() -> str:
-    """Prior-only report, used when geometry or the model bundle is unavailable."""
-    try:
-        from bite2text.report.render import render_modal_report
+    """Prior-only report, used when geometry or the model bundle is unavailable.
 
-        return render_modal_report()
+    It still carries the dental-health section. Those sentences need no mesh and no model —
+    they are base rates — so dropping them on the failure path would forfeit recall for
+    nothing. A degraded case should differ from a healthy one only in the occlusal values it
+    could not measure.
+    """
+    try:
+        from bite2text.compose import DEFAULT_DENTAL_HEALTH, DEFAULT_STYLE
+        from bite2text.report.render import MODAL_FINDINGS
+        from bite2text.report.style import render_styled
+
+        return render_styled(MODAL_FINDINGS, DEFAULT_DENTAL_HEALTH, DEFAULT_STYLE)
     except Exception:  # noqa: BLE001 - the literal below is the last line of defence
         return (
             "The patient presents a transverse constriction of the maxilla in the absence of "
             "crossbite. From a vertical standpoint, there is a deep bite. Sagittally, there is "
-            "a Class I molar and canine relationship bilaterally, with increased overjet. The "
-            "dental midlines are deviated relative to each other. The Curve of Spee and the "
-            "Curve of Wilson are increased. There is mild crowding in the upper and lower arches."
+            "a Class I molar and canine relationship on the right, and a Class I molar and "
+            "canine relationship on the left, with increased overjet. The dental midlines are "
+            "deviated relative to each other. The Curve of Spee and the Curve of Wilson are "
+            "increased. There is mild crowding in the upper and lower arches. Pit-and-fissure "
+            "sealants are present on the upper and lower first molars. No evident active "
+            "carious processes are noted. The gingivae are inflamed. Mild buccal gingival "
+            "recessions are present in the lower arch."
         )
 
 
@@ -167,12 +179,20 @@ def run() -> int:
                 break
         log(f"model bundle: {bundle}")
 
-        composer = ReportComposer(bundle)
-        composed = composer.compose_from_paths(case_id, upper, lower)
+        photo_checkpoint = None
+        for candidate in (MODEL_PATH / "photo_fields.pt", RESOURCE_PATH / "photo_fields.pt"):
+            if candidate.exists():
+                photo_checkpoint = candidate
+                break
+        log(f"photo checkpoint: {photo_checkpoint}")
+
+        composer = ReportComposer(bundle, photo_checkpoint)
+        composed = composer.compose_from_paths(case_id, upper, lower, photos)
         for warning in composed.warnings:
             log(f"warning: {warning}")
-        n_geometry = sum(1 for v in composed.sources.values() if v == "geometry")
-        log(f"fields from geometry: {n_geometry}")
+        from collections import Counter
+
+        log(f"field sources: {dict(Counter(composed.sources.values()))}")
         write_report(composed.report)
         return 0
     except Exception:  # noqa: BLE001 - never let a case produce no output
