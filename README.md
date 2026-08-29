@@ -64,6 +64,8 @@ report text is committed to this repository.
 
 ## Artifact backup
 
+- [ToothFairy4 artifact backup](https://huggingface.co/GOVINDFROM/odin-toothfairy4-artifacts)
+  
 Models, submission archives, evaluation summaries, logs, and plots can be backed up to a
 private Hugging Face repository. Copy `.env.example` to the ignored `.env`, set the lowercase
 `hf` variable to a fine-grained token, then run:
